@@ -1,21 +1,21 @@
-function run(model, grid, output_freq=0, verbose=true)
+function simulate(model, grid, output_freq)
 
     etime = 0.0
     sim_time = grid.nt * grid.dt
 
-    if output_freq > 0
+    if output_freq > 0.0
         nsnaps = floor(Int, sim_time/output_freq) + 1
         snapshots = Array{Float64}(undef, 4, grid.nx, grid.nz, nsnaps)
         etimes = Vector{Float64}(undef, nsnaps)    
         # output initial state
         snapshots[:,:,:,1] = createSnapshot(model, grid)
-    end
-    
+    end   
+
     direction_switch = true
     output_counter = 0.0
     counter = 1
     @showprogress for i in 1:grid.nt
-        if output_freq > 0 & output_counter >= output_freq
+        if output_freq > 0.0 && output_counter >= output_freq
             counter += 1
             output_counter = output_counter - output_freq
             snapshots[:,:,:,counter] = createSnapshot(model, grid)
@@ -29,11 +29,6 @@ function run(model, grid, output_freq=0, verbose=true)
         #output_gif!(model, etime, grid, anim);
     end
 
-    mass, te = reductions(model, grid)
-    if verbose
-        println("d_mass: ", (mass - mass0) / mass0)
-        println("d_te:   ", (te - te0) / te0)
-    end
 
     if output_freq > 0
         output(snapshots, grid, etimes)
