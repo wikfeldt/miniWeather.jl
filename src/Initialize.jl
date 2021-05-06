@@ -15,8 +15,8 @@ struct Grid
     nx::Int64
     nz::Int64
     nt::Int64
-    dx::Int64
-    dz::Int64
+    dx::Float64
+    dz::Float64
     dt::Float64
 end
 
