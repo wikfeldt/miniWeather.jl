@@ -1,4 +1,4 @@
-function simulate(model, grid, output_freq)
+function run!(model, grid, output_freq)
 
     etime = 0.0
     sim_time = grid.nt * grid.dt

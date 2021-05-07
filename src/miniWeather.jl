@@ -11,6 +11,6 @@ include("utils.jl")
 include("Initialize.jl")
 include("Timestep.jl")
 
-export Grid, Model, init, simulate, reductions, DATA_SPEC_THERMAL
+export Grid, Model, init, run!, reductions, DATA_SPEC_THERMAL
 
 end

@@ -10,7 +10,7 @@ model, grid = init(nx_glob, nz_glob, sim_time, data_spec_int);
 
 mass0, te0 = reductions(model, grid)
 
-simulate(model, grid, output_freq)
+run!(model, grid, output_freq)
 
 mass, te = reductions(model, grid)
 
