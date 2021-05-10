@@ -1,13 +1,11 @@
-using Pkg
-Pkg.activate("miniWeather")
-
 using miniWeather
 
 using ArgParse
 
 function parse_commandline()
     s = ArgParseSettings()
-
+    choices_weather_types = ["collision", "thermal", "mountain_waves", 
+        "turbulence", "density_current", "injection"]
     @add_arg_table s begin
         "--nx_glob"
         help = "Total number of cells in the x-direction"
@@ -25,9 +23,11 @@ function parse_commandline()
         help = "How frequently to output data to file (in seconds)"
         arg_type = Int
         default = 10
-        "--data_spec_int"
-        help = "How to initialize the data"
-        default = Int(DATA_SPEC_THERMAL)
+        "--weather_type"
+        help = "Choose weather scenario and how to initialize the data. " * 
+                "Must be one of " * join(choices_weather_types, ", ", " or ")
+        range_tester = (x->x ∈ choices_weather_types)
+        default = "thermal"
     end
 
     return parse_args(s)
@@ -38,40 +38,19 @@ end
 
 function main()
 
-    if !isinteractive()
-        config = parse_commandline()
-    else
-        config = Dict(
-            "nx_glob" => 100,
-            "nz_glob" => 50,
-            "sim_time" => 50,
-            "output_freq" => 10,
-            "data_spec_int" => Int(DATA_SPEC_THERMAL),
-        )
-    end
+    config = parse_commandline()
 
     println("Parsed args:")
     for (arg, val) in config
         println("  $arg  =>  $val")
     end
 
-    model, grid = init(config["nx_glob"], config["nz_glob"], config["sim_time"], config["data_spec_int"])
+    model, grid = init(config["nx_glob"], config["nz_glob"], config["sim_time"], config["weather_type"])
 
     mass0, te0 = reductions(model, grid)
     println("mass = $mass0, te = $te0")
-
-    #output(model, etime)
-
-    #=
-    anim_dens = Animation()
-    anim_uwnd = Animation()
-    anim_wwnd = Animation()
-    anim_theta = Animation()
-    anim = [anim_dens, anim_uwnd, anim_wwnd, anim_theta]
-    #output_gif!(model, etime, grid, anim);
-    =#
     
-    run(model, grid, config["output_grid"], verbose=true)
+    run!(model, grid, config["output_freq"], verbose=true)
 
     mass, te = reductions(model, grid)
     println("d_mass: ", (mass - mass0) / mass0)
