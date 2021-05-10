@@ -170,7 +170,7 @@ end
 #r,u,w,t are output density, u-wind, w-wind, and potential temperature at that location
 #hr and ht are output background hydrostatic density and potential temperature at that location
 function injection(x, z)
-    hydro_const_theta(z, hr, ht)
+    hr, ht = hydro_const_theta(z)
     r = 0.0
     t = 0.0
     u = 0.0
