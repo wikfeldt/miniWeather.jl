@@ -1,4 +1,4 @@
-function run!(model, grid, output_freq)
+function run!(model, grid, output_freq, ncfilename)
 
     etime = 0.0
     sim_time = grid.nt * grid.dt
@@ -31,7 +31,7 @@ function run!(model, grid, output_freq)
 
 
     if output_freq > 0
-        output(snapshots, grid, etimes)
+        output(snapshots, grid, etimes, ncfilename)
     end
     
 
@@ -71,7 +71,6 @@ end
 #state_out = state_init + dt * rhs(state_forcing)
 #Meaning the step starts from state_init, computes the rhs using state_forcing, and stores the result in state_out
 function semi_discrete_step!(model, grid, dir, mode)
-    #function semi_discrete_step!(state_init , state_forcing , state_out, grid, dir, data_spec_int)
     # mode=1 sets model.state=state_init & state_forcing and model.state_tmp=state_out
     # mode=2 sets model.state=initial-state and model.state_tmp=state_forcing & state_out
     # mode=3 sets model.state=initial state & state_out and model.state_tmp=state_forcing      
@@ -85,7 +84,7 @@ function semi_discrete_step!(model, grid, dir, mode)
                 model.hy_dens_cell,
                 model.hy_dens_theta_cell,
                 grid,
-                model.data_spec_int,
+                model.weather_type,
             )
             compute_tendencies_x!(
                 model.state,
@@ -101,7 +100,7 @@ function semi_discrete_step!(model, grid, dir, mode)
                 model.hy_dens_cell,
                 model.hy_dens_theta_cell,
                 grid,
-                model.data_spec_int,
+                model.weather_type,
             )
             compute_tendencies_x!(
                 model.state_tmp,
@@ -118,7 +117,7 @@ function semi_discrete_step!(model, grid, dir, mode)
     elseif dir == DIR_Z
         #Set the halo values for this MPI task's fluid state in the z-direction
         if mode == 1
-            set_halo_values_z!(model.state, grid, model.data_spec_int)
+            set_halo_values_z!(model.state, grid, model.weather_type)
             compute_tendencies_z!(
                 model.state,
                 model.flux,
@@ -129,7 +128,7 @@ function semi_discrete_step!(model, grid, dir, mode)
                 grid,
             )
         elseif mode == 2 || mode == 3
-            set_halo_values_z!(model.state_tmp, grid, model.data_spec_int)
+            set_halo_values_z!(model.state_tmp, grid, model.weather_type)
             compute_tendencies_z!(
                 model.state_tmp,
                 model.flux,
@@ -301,7 +300,7 @@ end
 
 
 #Set this MPI task's halo values in the x-direction. This routine will require MPI
-function set_halo_values_x!(state, hy_dens_cell, hy_dens_theta_cell, grid, data_spec_int)
+function set_halo_values_x!(state, hy_dens_cell, hy_dens_theta_cell, grid, weather_type)
     #real(rp), intent(inout) :: state(1-hs:nx+hs,1-hs:nz+hs,NUM_VARS)
     ###
     # TODO: EXCHANGE HALO VALUES WITH NEIGHBORING MPI TASKS
@@ -324,7 +323,7 @@ function set_halo_values_x!(state, hy_dens_cell, hy_dens_theta_cell, grid, data_
     end
     ###
 
-    if (data_spec_int == DATA_SPEC_INJECTION)
+    if (weather_type == "injection")
         #if (myrank == 0)
         for k = 1:grid.nz
             z = (k_beg - 1 + k - 0.5) * grid.dz
@@ -343,7 +342,7 @@ end
 
 #Set this MPI task's halo values in the z-direction. This does not require MPI because there is no MPI
 #decomposition in the vertical direction
-function set_halo_values_z!(state, grid, data_spec_int)
+function set_halo_values_z!(state, grid, weather_type)
     #real(rp), intent(inout) :: state(1-hs:nx+hs,1-hs:nz+hs,NUM_VARS)
     mnt_width = xlen / 8
     ###
@@ -357,7 +356,7 @@ function set_halo_values_z!(state, grid, data_spec_int)
                 state[i, grid.nz+hs+1, ll] = 0
                 state[i, grid.nz+hs+2, ll] = 0
                 #Impose the vertical momentum effects of an artificial cos^2 mountain at the lower boundary
-                if (data_spec_int == DATA_SPEC_MOUNTAIN)
+                if (weather_type == "mountain_waves")
                     x = (i_beg - 1 + i - 0.5) * grid.dx
                     if (abs(x - xlen / 4) < mnt_width)
                         xloc = (x - (xlen / 4)) / mnt_width

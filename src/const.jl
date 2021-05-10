@@ -24,11 +24,3 @@ const ID_RHOT = 4           #index for density * potential temperature ("rho * t
 const DIR_X = 1              #Integer constant to express that this operation is in the x-direction
 const DIR_Z = 2              #Integer constant to express that this operation is in the z-direction
 
-@enum DATA_SPEC begin
-    DATA_SPEC_COLLISION = 1
-    DATA_SPEC_THERMAL = 2
-    DATA_SPEC_MOUNTAIN = 3
-    DATA_SPEC_TURBULENCE = 4
-    DATA_SPEC_DENSITY_CURRENT = 5
-    DATA_SPEC_INJECTION = 6
-end

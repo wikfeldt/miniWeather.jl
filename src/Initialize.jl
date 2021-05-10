@@ -1,3 +1,5 @@
+include("const.jl")
+
 mutable struct Model
     state::Array{Float64,3}
     state_tmp::Array{Float64,3}
@@ -8,7 +10,7 @@ mutable struct Model
     hy_dens_int::Vector{Float64}
     hy_dens_theta_int::Vector{Float64}
     hy_pressure_int::Vector{Float64}
-    data_spec_int::Int64
+    weather_type::String
 end
 
 struct Grid
@@ -20,8 +22,7 @@ struct Grid
     dt::Float64
 end
 
-function init(nx_glob, nz_glob, sim_time, data_spec_int)
-
+function init(nx_glob, nz_glob, sim_time, weather_type)
     r, hr, ht, u, w, t = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
     #  ierr = MPI_Init(argc,argv)
 
@@ -63,7 +64,7 @@ function init(nx_glob, nz_glob, sim_time, data_spec_int)
         zeros(nz + 1),                              # hy_dens_int
         zeros(nz + 1),                              # hy_dens_theta_int
         zeros(nz + 1),                              # hy_pressure_int
-        data_spec_int,                              # data_spec_int
+        weather_type,   # thermal, injection, mountain_waves, collision, turbulence, density_current
     )
     #Define the maximum stable time step based on an assumed maximum wind speed
     dt = min(dx, dz) / max_speed * cfl
@@ -114,20 +115,7 @@ function init(nx_glob, nz_glob, sim_time, data_spec_int)
                     z = (k_beg + k - 1 - hs + 0.5) * dz + (qpoints[kk] - 0.5) * dz
 
                     #Set the fluid state based on the user's specification
-                    if data_spec_int == Int(DATA_SPEC_COLLISION)
-                        r, t, u, w, hr, ht = collision(x, z)
-                    elseif data_spec_int == Int(DATA_SPEC_THERMAL)
-                        r, t, u, w, hr, ht = thermal(x, z)
-                    elseif data_spec_int == Int(DATA_SPEC_MOUNTAIN)
-                        r, t, u, w, hr, ht = mountain_waves(x, z)
-                    elseif data_spec_int == Int(DATA_SPEC_TURBULENCE)
-                        r, t, u, w, hr, ht = turbulence(x, z)
-                    elseif data_spec_int == Int(DATA_SPEC_DENSITY_CURRENT)
-                        r, t, u, w, hr, ht = density_current(x, z)
-                    elseif data_spec_int == Int(DATA_SPEC_INJECTION)
-                        r, t, u, w, hr, ht = injection(x, z)
-                    end
-                    #println(r, hr, u, w, ht)
+                    r, t, u, w, hr, ht = initialCondition(weather_type, x, z)
                     #Store into the fluid state array
                     model.state[i, k, ID_DENS] += r * qweights[ii] * qweights[kk]
                     model.state[i, k, ID_UMOM] += (r + hr) * u * qweights[ii] * qweights[kk]
@@ -149,19 +137,7 @@ function init(nx_glob, nz_glob, sim_time, data_spec_int)
         for kk = 1:nqpoints
             z = (k_beg + k - 1 - hs + 0.5) * dz
             #Set the fluid state based on the user's specification
-            if data_spec_int == Int(DATA_SPEC_COLLISION)
-                r, t, u, w, hr, ht = collision(0.0, z)
-            elseif data_spec_int == Int(DATA_SPEC_THERMAL)
-                r, t, u, w, hr, ht = thermal(0.0, z)
-            elseif data_spec_int == Int(DATA_SPEC_MOUNTAIN)
-                r, t, u, w, hr, ht = mountain_waves(0.0, z)
-            elseif data_spec_int == Int(DATA_SPEC_TURBULENCE)
-                r, t, u, w, hr, ht = turbulence(0.0, z)
-            elseif data_spec_int == Int(DATA_SPEC_DENSITY_CURRENT)
-                r, t, u, w, hr, ht = density_current(0.0, z)
-            elseif data_spec_int == Int(DATA_SPEC_INJECTION)
-                r, t, u, w, hr, ht = injection(0.0, z)
-            end
+            r, t, u, w, hr, ht = initialCondition(weather_type, 0.0, z)
             model.hy_dens_cell[k] = model.hy_dens_cell[k] + hr * qweights[kk]
             model.hy_dens_theta_cell[k] =
                 model.hy_dens_theta_cell[k] + hr * ht * qweights[kk]
@@ -173,19 +149,8 @@ function init(nx_glob, nz_glob, sim_time, data_spec_int)
     ########################/
     for k = 1:nz+1
         z = (k_beg + k - 1) * dz
-        if data_spec_int == Int(DATA_SPEC_COLLISION)
-            r, t, u, w, hr, ht = collision(0.0, z)
-        elseif data_spec_int == Int(DATA_SPEC_THERMAL)
-            r, t, u, w, hr, ht = thermal(0.0, z)
-        elseif data_spec_int == Int(DATA_SPEC_MOUNTAIN)
-            r, t, u, w, hr, ht = mountain_waves(0.0, z)
-        elseif data_spec_int == Int(DATA_SPEC_TURBULENCE)
-            r, t, u, w, hr, ht = turbulence(0.0, z)
-        elseif data_spec_int == Int(DATA_SPEC_DENSITY_CURRENT)
-            r, t, u, w, hr, ht = density_current(0.0, z)
-        elseif data_spec_int == Int(DATA_SPEC_INJECTION)
-            r, t, u, w, hr, ht = injection(0.0, z)
-        end
+        #Set the fluid state based on the user's specification
+        r, t, u, w, hr, ht = initialCondition(weather_type, 0.0, z)
         model.hy_dens_int[k] = hr
         model.hy_dens_theta_int[k] = hr * ht
         model.hy_pressure_int[k] = C0 * (hr * ht)^gamma
@@ -194,6 +159,11 @@ function init(nx_glob, nz_glob, sim_time, data_spec_int)
     return model, grid
 end
 
+function initialCondition(funcname, x, z)
+    func = Symbol(funcname)
+    r, t, u, w, hr, ht = eval(:($func($x, $z)))
+    return r, t, u, w, hr, ht
+end
 
 #This test case is initially balanced but injects fast, cold air from the left boundary near the model top
 #x and z are input coordinates at which to sample
@@ -274,7 +244,7 @@ end
 #x and z are input coordinates at which to sample
 #r,u,w,t are output density, u-wind, w-wind, and potential temperature at that location
 #hr and ht are output background hydrostatic density and potential temperature at that location
-function collision!(x, z, r, u, w, t, hr, ht)
+function collision(x, z, r, u, w, t, hr, ht)
     hr, ht = hydro_const_theta!(z)
     r = 0.0
     t = 0.0
