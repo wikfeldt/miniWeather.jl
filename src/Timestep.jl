@@ -160,9 +160,9 @@ function semi_discrete_step!(model, grid, dir, mode)
         end
     end
     if mode == 1 || mode == 2
-        model.state_tmp = state_out
+        model.state_tmp .= state_out
     elseif mode == 3
-        model.state = state_out
+        model.state .= state_out
     else
         throw(ArgumentError("mode must be either 1, 2 or 3"))
     end

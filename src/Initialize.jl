@@ -1,6 +1,6 @@
 include("const.jl")
 
-mutable struct Model
+struct Model
     state::Array{Float64,3}
     state_tmp::Array{Float64,3}
     flux::Array{Float64,3}
