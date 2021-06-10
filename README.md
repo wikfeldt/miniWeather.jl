@@ -1,21 +1,29 @@
 # miniWeather
 
 This package simulates weather-like flows and can be used for training in parallelizing 
-and porting numerical Julia code to accelerated HPC architectures. It is directly derived 
-from and inspired by [this miniWeather Mini App](https://github.com/mrnorman/miniWeather) 
+and porting numerical Julia code to accelerated HPC architectures. It is derived 
+from and inspired by [this miniWeather mini app](https://github.com/mrnorman/miniWeather) 
 developed by [Matt Norman](https://mrnorman.github.io), which provides example serial code 
 in C, C++ and Fortran and solutions for how to parallelize it with MPI, OpenACC-Offloading, OpenMP-Threading and OpenMP-Offloading.
 
 ## Installation
 
-The miniWeather package can be installed with the following command from the Julia REPL:
+The miniWeather package can be installed from the Julia REPL by:
 ```julia
-julia> using Pkg; Pkg.clone("https://github.com/wikfeldt/miniWeather.jl")
+julia> ] 
+pkg> add "https://github.com/wikfeldt/miniWeather.jl"
 ```
 
-then it can be imported with the command:
+To download the package for further development it is handier 
+to clone the repository:
+```bash
+git clone https://github.com/wikfeldt/miniWeather.jl
+```
+and work on the source code under `miniWeather.jl/src`.
+Your developmental version can then be imported by 
 ```julia
-julia> using miniWeather
+julia> ]
+pkg> add /your/path/to/miniWeather.jl
 ```
 
 ## Usage
@@ -62,7 +70,19 @@ println("Δ_te:   ", (te - te0) / te0)
 
 ## Testing
 
-WRITEME
+An end-to-end test can be run by 
+```bash
+julia --project=. test/runtests.jl
+```
+
+This test runs a simulation using 
+```julia
+nx = 100
+nz = 50
+sim_time = 400
+```
+and asserts that the change in mass and kinetic energy are smaller than 
+1.0e-9 and 4.5e-5, respectively.
 
 ## Parallelization 
 
@@ -70,4 +90,6 @@ WRITEME
 
 ## License and credit
 
-WRITEME
+This project is inspired by and derived from [this miniWeather mini app](https://github.com/mrnorman/miniWeather) 
+developed by [Matt Norman](https://mrnorman.github.io) in C, C++ and Fortran.
+`miniWeather.jl` is licensed under the BSD 2-Clause "Simplified" License.
