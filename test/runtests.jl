@@ -8,9 +8,9 @@ using Test
     out_freq = 400
     weather_type = "thermal"
 
-    model, grid = init(nx_glob, nz_glob, sim_time, weather_type);
+    model, grid = init(nx, nz, sim_time, weather_type);
     mass0, te0 = reductions(model, grid)
-    simulate(model, grid, output_freq)
+    run!(model, grid, out_freq, "output.nc")
     mass, te = reductions(model, grid)
 
     @test (mass - mass0) / mass0 < 1.0e-9
